@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mengecilkan Ukuran File</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <style>
+        body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f4f4f4;
+}
+
+.container {
+    border: 2px solid #ffffff;
+    border-radius: 10px;
+    padding: 20px;
+    width: 80%;
+    max-width: 600px;
+    background-color: rgba(255, 255, 255, 0.2); /* Set background color with opacity */
+    margin: 0 auto; /* Center horizontally */
+    text-align: center; /* Align content in the center */
+}
+
+/* Rest of your existing styles */
+
+
+h1 {
+    text-align: center;
+    color: #333;
+}
+
+input[type="file"] {
+    display: block;
+    margin: 20px auto;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    outline: none;
+    width: calc(100% - 24px); /* Adjusted width to accommodate padding and borders */
+    box-sizing: border-box; /* Ensures the width includes padding and borders */
+}
+
+button {
+    display: block;
+    margin: 20px auto;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#status {
+    margin-top: 20px;
+    text-align: center;
+}
+
+a {
+    text-decoration: none;
+    color: #007bff;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+    </style>
+</head>
+
+<body style="background-image: url(img/bg3.gif);background-size: cover; font-family: Georgia, 'Times New Roman', Times, serif;">
+    <div class="container">
+        <div class="logo">
+            <a href="http://localhost:52330/" src class="nav-logo"><img style="height: 60px; width: 150px;" src="img/logo.png" alt="Company Logo"></a>
+        </div>
+        <h1>Mengecilkan Ukuran File</h1>
+        <input type="file" id="fileInput" accept=".jpg, .jpeg, .png" required>
+        <button onclick="compressAndResize()">Mengecilkan</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        function compressAndResize() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const img = new Image();
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = img.width / 2; // Misalnya, mengurangi lebar gambar setengahnya
+                        canvas.height = img.height / 2; // Misalnya, mengurangi tinggi gambar setengahnya
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        
+                        canvas.toBlob(function (blob) {
+                            const zip = new JSZip();
+                            zip.file(file.name.replace(/\.[^/.]+$/, "") + '_smaller.' + file.name.split('.').pop(), blob);
+
+                            zip.generateAsync({ type: "blob" }).then(function (content) {
+                                const downloadLink = document.createElement('a');
+                                downloadLink.href = URL.createObjectURL(content);
+                                downloadLink.download = 'images.zip'; // Nama file ZIP
+                                downloadLink.textContent = ' Download ZIP Disini';
+                                
+                                const status = document.getElementById('status');
+                                status.innerHTML = '';
+                                status.appendChild(downloadLink);
+                            });
+                        }, file.type);
+                    };
+                    img.src = event.target.result;
+                };
+
+                reader.onerror = function (error) {
+                    console.error('Error reading the file:', error);
+                };
+
+                reader.readAsDataURL(file);
+            } else {
+                console.error('Please select a file.');
+            }
+        }
+    </script>
+</body>
+
+</html>

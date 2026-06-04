@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Enkripsi</title>
+    <link rel="stylesheet" href="./style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mitr&display=swap" rel="stylesheet">
+    <style>
+body {
+    font-family: 'Mitr', sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #f5f5f5;
+    width: 300%; /* Atur lebar body sesuai preferensi */
+    margin: 0 auto; /* Untuk membuatnya terpusat di layar */
+    max-width: 1200px; /* Jika ingin tetapkan lebar maksimum */
+}
+
+.main {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.nav-logo img {
+    display: block;
+    margin: 0 auto;
+}
+
+.container {
+    text-align: center;
+}
+
+label {
+    display: block;
+    margin-bottom: 20px;
+}
+
+input[type="file"] {
+    display: block;
+    margin: 10px auto;
+}
+
+input[type="password"] {
+    display: block;
+    margin: 10px auto;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+/* Styling for history section */
+.riwayat {
+    text-align: center;
+    margin-top: 40px;
+    border-top: 2px solid #ddd;
+    padding-top: 20px;
+} 
+
+.riwayat-de h1 {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.riwayat-de div {
+    margin-bottom: 10px;
+}
+
+.riwayat-de div a {
+    text-decoration: none;
+    color: #0366d6;
+    margin-right: 10px;
+}
+
+.riwayat-de div a:hover {
+    text-decoration: underline;
+} 
+
+    </style>
+</head>
+<body style="background-image: url(img/bg2.gif);background-size: cover; font-family: Georgia, 'Times New Roman', Times, serif;">
+    <div class="main">
+        <header>
+            <nav>
+                <div class="logo">
+                    <a href="/" src class="nav-logo"><img style="height: 60px; width: 150px;" src="img/logo.png" alt="Company Logo"></a>
+                </div>
+            </nav>
+        </header>    
+        <div class="container" style="text-align: center; width: 500px;">
+            <div class="gradient-overlay" style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0.8) 100%);
+                pointer-events: none;"></div>
+            <h1>Enkripsi File</h1>
+            <label for="images" class="drop-container">
+                <form id="encryptionForm" action="/encrypt" method="POST" enctype="multipart/form-data" class="form-inline">
+                    <input type="file" id="images" name="file" accept=".pdf, .jpg, .png, .txt" required ><br>
+                    <input type="password" id="pwd"  name="key" placeholder="Masukkan kunci" required style="margin-top: 30px;"><br>  
+                    <button type="submit">Enkripsi</button>
+                </form>
+            </label>
+            <div class="content"></div>
+            <div class="riwayat">
+                <div class="riwayat-de">
+                    <h1>Riwayat Enkripsi</h1>
+                    <div id="encryptionLog"></div>
+                </div>
+            </div>
+        </div>
+    </div>  
+
+    <script>
+function getApiBase() {
+    const isHttp = window.location.protocol === "http:" || window.location.protocol === "https:";
+    const hasHost = Boolean(window.location.hostname);
+    const apiOrigin = isHttp && hasHost
+        ? `${window.location.protocol}//${window.location.hostname}:4000`
+        : "http://localhost:4000";
+    return isHttp && window.location.port === "4000" ? "" : apiOrigin;
+}
+
+const API_BASE = getApiBase();
+
+function setStatus(message, isError) {
+    const statusDiv = document.querySelector(".content");
+    if (!statusDiv) return;
+    statusDiv.style.color = isError ? "#b00020" : "#1b5e20";
+    statusDiv.innerHTML = message;
+}
+
+function createLogEntryDiv(filename, type) {
+    const div = document.createElement("div");
+
+    const span = document.createElement("span");
+    span.textContent = filename;
+
+    const downloadLink = document.createElement("a");
+    downloadLink.href = `${API_BASE}/download/${type}/${filename}`;
+    downloadLink.download = filename;
+    downloadLink.textContent = " Download Disini";
+
+    div.appendChild(span);
+    div.appendChild(downloadLink);
+
+    return div;
+}
+
+// Load riwayat enkripsi
+window.addEventListener("DOMContentLoaded", () => {
+    fetch(`${API_BASE}/logs/encrypted`)
+        .then(res => res.json())
+        .then(data => {
+            const encryptionLogDiv = document.getElementById("encryptionLog");
+            encryptionLogDiv.innerHTML = "";
+
+            data.forEach(item => {
+                const div = createLogEntryDiv(item.filename, "encrypted");
+                encryptionLogDiv.appendChild(div);
+            });
+        })
+        .catch(err => console.error(err));
+});
+
+// Submit enkripsi
+const encryptionForm = document.getElementById("encryptionForm");
+encryptionForm.addEventListener("submit", event => {
+    event.preventDefault();
+
+    const submitBtn = encryptionForm.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+    setStatus("Memproses enkripsi...", false);
+
+    const formData = new FormData(encryptionForm);
+
+    fetch(`${API_BASE}${encryptionForm.getAttribute('action')}`, {
+        method: encryptionForm.method,
+        body: formData
+    })
+    .then(res => {
+        if (!res.ok) {
+            return res.text().then(t => {
+                throw new Error(t || "Encrypt gagal");
+            });
+        }
+        return res.json();
+    })
+    .then(data => {
+        const encryptionLogDiv = document.getElementById("encryptionLog");
+        const div = createLogEntryDiv(data.filename, "encrypted");
+        encryptionLogDiv.appendChild(div);
+
+        setStatus(`Sukses. <a href="${API_BASE}/download/encrypted/${encodeURIComponent(data.filename)}" target="_blank">Download hasil enkripsi</a>`, false);
+
+        encryptionForm.reset();
+    })
+    .catch(err => {
+        console.error(err);
+        setStatus(`Gagal enkripsi: ${err.message}`, true);
+    })
+    .finally(() => {
+        if (submitBtn) submitBtn.disabled = false;
+    });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Algoritma AES256</title>
+    <link rel="stylesheet" href="./style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mitr&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="main">
+        <header>
+            <nav>
+                <div class="logo">
+                    <h1>ALGORITMA AES256</h1>
+                    <hr class="separator">
+                    <div class="content"></div>
+                </div>
+            </nav>
+        </header>    
+        <div class="container">
+            <hr class="separator">
+                    <div class="content"></div>
+            <h1>Dekripsi File</h1>
+            <label for="images" class="drop-container">
+                <form id="decryptionForm" action="/decrypt" method="POST" enctype="multipart/form-data" class="form-inline">
+                    <input type="file" id="images" name="file" accept=".pdf, .jpg, .png, .txt" required>
+                    <input type="password" id="pwd"  name="key" placeholder="Masukkan kunci" required>
+                    <button type="submit">Dekripsi</button>
+                </form>
+            </label>
+            <hr class="separator">
+            <div class="content"></div>
+            <div class="riwayat">
+                <div class="riwayat-de">
+                    <h1>Riwayat Dekripsi</h1>
+                    <div id="decryptionLog"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fungsi utilitas untuk membuat elemen div untuk setiap entri log
+        function createLogEntryDiv(filename, type) {
+            const div = document.createElement("div");
+            const span = document.createElement("span");
+            const downloadLink = document.createElement("a");
+
+            span.textContent = filename;
+            downloadLink.href = `/download/${type}/${filename}`;
+            downloadLink.download = filename;
+            downloadLink.textContent = " Download Disini";
+
+            div.appendChild(span);
+            div.appendChild(downloadLink);
+
+            return div;
+        }
+
+        // Ambil riwayat enkripsi dan dekripsi saat halaman dimuat
+        window.addEventListener("DOMContentLoaded", () => {
+            fetch("/")
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, "text/html");
+
+                    const decryptionLogDiv = doc.getElementById("decryptionLog");
+
+                    const decryptionEntries = Array.from(decryptionLogDiv.getElementsByTagName("span"));
+
+                    decryptionEntries.forEach(entry => {
+                        const filename = entry.textContent.trim();
+                        const div = createLogEntryDiv(filename, "decrypted");
+                        decryptionLogDiv.appendChild(div);
+                    });
+                })
+                .catch(error => {
+                    console.error("Error retrieving encryption and decryption logs:", error);
+                });
+        });
+
+        // Update riwayat dekripsi saat formulir dekripsi disubmit
+        const decryptionForm = document.getElementById("decryptionForm");
+        decryptionForm.addEventListener("submit", event => {
+            event.preventDefault();
+
+            const formData = new FormData(decryptionForm);
+            fetch(decryptionForm.action, {
+                    method: decryptionForm.method,
+                    body: formData
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    } else {
+                        throw new Error("Failed to decrypt file.");
+                    }
+                })
+                .then(() => {
+                    const fileInput = decryptionForm.querySelector('input[type="file"]');
+                    const filename = fileInput.files[0].name;
+                    const div = createLogEntryDiv(filename, "decrypted");
+                    const decryptionLogDiv = document.getElementById("decryptionLog");
+                    decryptionLogDiv.appendChild(div);
+                    fileInput.value = null; // Clear file input value after decryption
+                })
+                .catch(error => {
+                    console.error("Decryption error:", error);
+                });
+        });
+    </script>
+</body>
+</html>
