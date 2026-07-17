@@ -1,78 +1,193 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>CrypTitan</title>
-	<link rel="stylesheet" type="text/css" href="public/css/style.css">
-	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-
-	<script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CrypTitan — Retro Encryption Suite</title>
+  <meta name="description" content="A retro Windows-style toolkit for AES-256 file encryption, decryption, and lossless compression. 100% client-safe." />
+  <link rel="stylesheet" href="public/css/style.css" />
 </head>
-<body>
-	<nav class="navbar">
-		<div class="nav-container">
-			<a href="#section_one" src class="nav-logo"><img style="height: 40px; width: 100px;" src="public/img/logo.png" alt="Company Logo"></a>
-			<div class="nav">
-				<a href="#section_one" style=" text-decoration: none"
-				><strong>Enkripsi</strong></a
-				>
-				<a href="#section_two" style=" text-decoration: none"
-				><strong>Deskripsi</strong></a
-				>
-				<a href="#section_three" style=" text-decoration: none"
-				><strong>Kompres File</strong></a
-				>
-			</nav>
-			</div>
-				</div>
-			</nav>
-	
-		<!-- banner -->
-	<div class="container">
-	<section id="section_one" class="satu" style="background-image: url(public/img/gambar_1.gif) ;background-size: cover;
-            background-position: bottom;">
-		<div class="enkripsi">
-			<p>Apa itu enkripsi? <br>
-Enkripsi adalah proses teknis yang mengonversikan informasi menjadi kode rahasia, sehingga mengaburkan data yang Anda kirim, terima, atau simpan. Pada dasarnya, sebuah algoritme digunakan untuk mengacak data, sebelum pihak penerima memulihkan kembali data yang diacak tersebut menggunakan kunci dekripsi. </p>
-<button><a href="public/enkripsi.html">Enkripsi</a></button>
-		</div>
+<body class="crt">
+  <div class="scanlines"></div>
 
-	</section>
+  <!-- ===== Title Bar / Taskbar ===== -->
+  <header class="win98-taskbar">
+    <div class="start-btn">
+      <span class="start-logo">▣</span> START
+    </div>
+    <div class="taskbar-title">C:\&gt; CRYPTITAN.EXE</div>
+    <div class="taskbar-clock" id="clock">--:--</div>
+  </header>
 
-	<section id="section_two" class="two" style="background-image: url(public/img/gambar_2.gif) ;background-size: cover;
-            background-position: bottom;">
-		<div class="dekripsi">
-			<p>Apa itu Dekripsi? <br>
-Enkripsi adalah proses teknis yang mengonversikan informasi menjadi kode rahasia, sehingga mengaburkan data yang Anda kirim, terima, atau simpan. Pada dasarnya, sebuah algoritme digunakan untuk mengacak data, sebelum pihak penerima memulihkan kembali data yang diacak tersebut menggunakan kunci dekripsi. </p>
-<button><a href="public/deskripsi.html">Dekripsi</a></button>
-		</div>
-	</section>
-	
-	<section id="section_three" class="three" style="background-image: url(public/img/gambar_3.gif) ;background-size: cover;
-            background-position: bottom;">
-		<div class="content-wrapper">
-		<div class="kompres">
-			<p>Apa itu Kompres file? <br>
-Enkripsi adalah proses teknis yang mengonversikan informasi menjadi kode rahasia, sehingga mengaburkan data yang Anda kirim, terima, atau simpan. Pada dasarnya, sebuah algoritme digunakan untuk mengacak data, sebelum pihak penerima memulihkan kembali data yang diacak tersebut menggunakan kunci dekripsi. </p>
-<button><a href="public/kompres.html">Kompres</a></button>
-		</div>
-		</div>
-	</section>
+  <main class="desktop">
 
-		<!-- footer -->	
-		</div>
-	</section>
-	
-	</div>
+    <!-- ===== HERO ===== -->
+    <section class="retro-window hero-window">
+      <div class="window-header">
+        <span class="window-title">■ CRYPTITAN.EXE — Main Console</span>
+        <div class="window-controls">
+          <button class="wc">_</button>
+          <button class="wc">▢</button>
+          <button class="wc close">×</button>
+        </div>
+      </div>
+      <div class="window-body hero-body">
+        <pre class="ascii-logo">
+   ██████╗██████╗ ██╗   ██╗██████╗ ████████╗██╗████████╗ █████╗ ███╗   ██╗
+  ██╔════╝██╔══██╗╚██╗ ██╔╝██╔══██╗╚══██╔══╝██║╚══██╔══╝██╔══██╗████╗  ██║
+  ██║     ██████╔╝ ╚████╔╝ ██████╔╝   ██║   ██║   ██║   ███████║██╔██╗ ██║
+  ██║     ██╔══██╗  ╚██╔╝  ██╔═══╝    ██║   ██║   ██║   ██╔══██║██║╚██╗██║
+  ╚██████╗██║  ██║   ██║   ██║        ██║   ██║   ██║   ██║  ██║██║ ╚████║
+   ╚═════╝╚═╝  ╚═╝   ╚═╝   ╚═╝        ╚═╝   ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝
+        </pre>
+        <p class="hero-tag">&gt; A retro terminal toolkit for <span class="blink">AES-256</span> encryption, decryption &amp; file compression.</p>
+        <nav class="hero-nav">
+          <a href="#section_one" class="retro-btn">[ 01 ] ENCRYPT</a>
+          <a href="#section_two" class="retro-btn">[ 02 ] DECRYPT</a>
+          <a href="#section_three" class="retro-btn">[ 03 ] COMPRESS</a>
+        </nav>
+      </div>
+    </section>
 
+    <!-- ===== SECTION 01 : ENCRYPT ===== -->
+    <section id="section_one" class="retro-window feature-window">
+      <div class="window-header">
+        <span class="window-title">▶ SECTION_01.DAT — Encryption Module</span>
+        <div class="window-controls"><button class="wc">_</button><button class="wc">▢</button><button class="wc close">×</button></div>
+      </div>
+      <div class="window-body feature-body">
+        <div class="feature-copy">
+          <h2 class="feature-heading">// ENCRYPT</h2>
+          <p class="feature-lead">
+            Turn any file into unreadable ciphertext with a passphrase only you know.
+          </p>
+          <p class="feature-desc">
+            Encryption is the process of scrambling readable information into a secret code so no
+            one else can open it without your key. Upload a file, set a strong password, and
+            CrypTitan produces a locked <code>encrypted_</code> copy powered by <b>AES-256-CBC</b>.
+            Every operation is stamped into your activity log below.
+          </p>
+          <ul class="feature-list">
+            <li>▸ AES-256-CBC with SHA-256 derived key</li>
+            <li>▸ Random 16-byte IV per file</li>
+            <li>▸ Activity log kept locally</li>
+          </ul>
+          <a href="public/enkripsi.html" class="retro-btn primary">▶ OPEN ENCRYPT.EXE</a>
+        </div>
+        <div class="feature-visual">
+          <div class="ascii-frame">
+            <pre>
+ ┌────────────────────────┐
+ │  file.txt              │
+ │  ▼ AES-256-CBC ▼       │
+ │  encrypted_file.txt    │
+ │  [██████████] 100%     │
+ │  STATUS: SECURED       │
+ └────────────────────────┘
+            </pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SECTION 02 : DECRYPT ===== -->
+    <section id="section_two" class="retro-window feature-window alt">
+      <div class="window-header">
+        <span class="window-title">▶ SECTION_02.DAT — Decryption Module</span>
+        <div class="window-controls"><button class="wc">_</button><button class="wc">▢</button><button class="wc close">×</button></div>
+      </div>
+      <div class="window-body feature-body reverse">
+        <div class="feature-visual">
+          <div class="ascii-frame">
+            <pre>
+ ┌────────────────────────┐
+ │  encrypted_file.txt    │
+ │  ▲ AES-256-CBC ▲       │
+ │  file.txt              │
+ │  KEY ● ● ● ● ● ● ● ●   │
+ │  STATUS: UNLOCKED      │
+ └────────────────────────┘
+            </pre>
+          </div>
+        </div>
+        <div class="feature-copy">
+          <h2 class="feature-heading">// DECRYPT</h2>
+          <p class="feature-lead">
+            Restore your original file from an <code>encrypted_</code> copy — instantly.
+          </p>
+          <p class="feature-desc">
+            Decryption reverses the scramble. Provide the encrypted file and the exact same
+            password you used to lock it. CrypTitan verifies the payload, applies the AES-256
+            decipher, and writes back a clean <code>decrypted_</code> copy. Wrong key = access
+            denied, so keep your passphrase safe.
+          </p>
+          <ul class="feature-list">
+            <li>▸ Works only on <code>encrypted_*</code> files</li>
+            <li>▸ Password must match the original</li>
+            <li>▸ Recovery log auto-saved</li>
+          </ul>
+          <a href="public/deskripsi.html" class="retro-btn primary">▶ OPEN DECRYPT.EXE</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SECTION 03 : COMPRESS ===== -->
+    <section id="section_three" class="retro-window feature-window">
+      <div class="window-header">
+        <span class="window-title">▶ SECTION_03.DAT — Compression Module</span>
+        <div class="window-controls"><button class="wc">_</button><button class="wc">▢</button><button class="wc close">×</button></div>
+      </div>
+      <div class="window-body feature-body">
+        <div class="feature-copy">
+          <h2 class="feature-heading">// COMPRESS</h2>
+          <p class="feature-lead">
+            Shrink files down using lossless GZIP — smaller size, same data.
+          </p>
+          <p class="feature-desc">
+            Compression rewrites your file using a smarter encoding so it takes up less disk space
+            without losing a single byte. Drop a file into CrypTitan and download the packed
+            <code>.gz</code> version — perfect for sharing logs, documents, or archives faster.
+          </p>
+          <ul class="feature-list">
+            <li>▸ Lossless GZIP algorithm</li>
+            <li>▸ Live before / after size report</li>
+            <li>▸ Runs entirely in your browser</li>
+          </ul>
+          <a href="public/kompres.html" class="retro-btn primary">▶ OPEN COMPRESS.EXE</a>
+        </div>
+        <div class="feature-visual">
+          <div class="ascii-frame">
+            <pre>
+ ┌────────────────────────┐
+ │  bigfile.log  2.4 MB   │
+ │  ▼ GZIP ▼              │
+ │  bigfile.log.gz 412 KB │
+ │  RATIO: 83% saved      │
+ │  STATUS: PACKED        │
+ └────────────────────────┘
+            </pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="retro-footer">
+      <pre>
+&gt; SYSTEM READY. TYPE 'HELP' FOR COMMANDS.
+&gt; (c) 1998–2026 CRYPTITAN CORP.  ALL RIGHTS RESERVED.
+      </pre>
+    </footer>
+  </main>
+
+  <script>
+    // live clock in taskbar
+    (function tick(){
+      const d = new Date();
+      const pad = n => String(n).padStart(2,'0');
+      const el = document.getElementById('clock');
+      if (el) el.textContent = pad(d.getHours())+':'+pad(d.getMinutes());
+      setTimeout(tick, 15000);
+    })();
+  </script>
 </body>
-<script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
-    <script>
-        $(document).ready(function(){
-            $(".bg-loader").hide();
-        });
-    </script>
 </html>

@@ -1,140 +1,89 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-    <title>Mengecilkan Ukuran File</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
-    <style>
-        body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: #f4f4f4;
-}
-
-.container {
-    border: 2px solid #ffffff;
-    border-radius: 10px;
-    padding: 20px;
-    width: 80%;
-    max-width: 600px;
-    background-color: rgba(255, 255, 255, 0.2); /* Set background color with opacity */
-    margin: 0 auto; /* Center horizontally */
-    text-align: center; /* Align content in the center */
-}
-
-/* Rest of your existing styles */
-
-
-h1 {
-    text-align: center;
-    color: #333;
-}
-
-input[type="file"] {
-    display: block;
-    margin: 20px auto;
-    padding: 10px;
-    border: 2px solid #ccc;
-    border-radius: 5px;
-    outline: none;
-    width: calc(100% - 24px); /* Adjusted width to accommodate padding and borders */
-    box-sizing: border-box; /* Ensures the width includes padding and borders */
-}
-
-button {
-    display: block;
-    margin: 20px auto;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    background-color: #007bff;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-button:hover {
-    background-color: #0056b3;
-}
-
-#status {
-    margin-top: 20px;
-    text-align: center;
-}
-
-a {
-    text-decoration: none;
-    color: #007bff;
-}
-
-a:hover {
-    text-decoration: underline;
-}
-
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CrypTitan — Compress</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/tool.css" />
 </head>
+<body class="crt">
+  <div class="scanlines"></div>
+  <header class="win98-taskbar">
+    <div class="start-btn"><span class="start-logo">▣</span> START</div>
+    <div class="taskbar-title">C:\&gt; COMPRESS.EXE</div>
+    <div class="taskbar-clock" id="clock">--:--</div>
+  </header>
 
-<body style="background-image: url(img/bg3.gif);background-size: cover; font-family: Georgia, 'Times New Roman', Times, serif;">
-    <div class="container">
-        <div class="logo">
-            <a href="http://localhost:52330/" src class="nav-logo"><img style="height: 60px; width: 150px;" src="img/logo.png" alt="Company Logo"></a>
-        </div>
-        <h1>Mengecilkan Ukuran File</h1>
-        <input type="file" id="fileInput" accept=".jpg, .jpeg, .png" required>
-        <button onclick="compressAndResize()">Mengecilkan</button>
-        <div id="status"></div>
-    </div>
+  <main class="desktop">
+    <section class="retro-window">
+      <div class="window-header">
+        <span class="window-title">■ COMPRESS.EXE — GZIP File Packer</span>
+        <div class="window-controls"><button class="wc">_</button><button class="wc">▢</button><button class="wc close">×</button></div>
+      </div>
+      <div class="window-body tool-body">
+        <a href="../index.html" class="retro-btn back">[ ◀ BACK ]</a>
+        <h1 class="tool-title">// COMPRESS A FILE</h1>
+        <p class="tool-hint">&gt; Runs entirely in your browser (GZIP). Output file will be downloaded as <code>&lt;name&gt;.gz</code>.</p>
 
-    <script>
-        function compressAndResize() {
-            const fileInput = document.getElementById('fileInput');
-            const file = fileInput.files[0];
+        <form id="cmpForm" class="tool-form">
+          <label class="fld"><span>&gt; SELECT FILE</span><input type="file" id="cmpFile" required /></label>
+          <button type="submit" class="retro-btn primary">▶ RUN COMPRESS</button>
+        </form>
 
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                    const img = new Image();
-                    img.onload = function () {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        canvas.width = img.width / 2; // Misalnya, mengurangi lebar gambar setengahnya
-                        canvas.height = img.height / 2; // Misalnya, mengurangi tinggi gambar setengahnya
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        
-                        canvas.toBlob(function (blob) {
-                            const zip = new JSZip();
-                            zip.file(file.name.replace(/\.[^/.]+$/, "") + '_smaller.' + file.name.split('.').pop(), blob);
+        <pre id="log" class="console-log">&gt; SYSTEM IDLE. AWAITING INPUT...</pre>
 
-                            zip.generateAsync({ type: "blob" }).then(function (content) {
-                                const downloadLink = document.createElement('a');
-                                downloadLink.href = URL.createObjectURL(content);
-                                downloadLink.download = 'images.zip'; // Nama file ZIP
-                                downloadLink.textContent = ' Download ZIP Disini';
-                                
-                                const status = document.getElementById('status');
-                                status.innerHTML = '';
-                                status.appendChild(downloadLink);
-                            });
-                        }, file.type);
-                    };
-                    img.src = event.target.result;
-                };
+        <h2 class="tool-sub">// HISTORY LOG</h2>
+        <div id="history" class="history-list"><em>&gt; No records yet.</em></div>
+      </div>
+    </section>
+  </main>
 
-                reader.onerror = function (error) {
-                    console.error('Error reading the file:', error);
-                };
+  <script>
+    (function tick(){const d=new Date(),p=n=>String(n).padStart(2,'0');const e=document.getElementById('clock');if(e)e.textContent=p(d.getHours())+':'+p(d.getMinutes());setTimeout(tick,15000)})();
 
-                reader.readAsDataURL(file);
-            } else {
-                console.error('Please select a file.');
-            }
-        }
-    </script>
+    const log = document.getElementById('log');
+    const histEl = document.getElementById('history');
+    const write = (t) => { log.textContent += '\n' + t; log.scrollTop = log.scrollHeight; };
+    const fmt = (n) => n < 1024 ? n+' B' : n < 1048576 ? (n/1024).toFixed(1)+' KB' : (n/1048576).toFixed(2)+' MB';
+
+    const HIST_KEY = 'cryptitan-cmp-history';
+    const loadHist = () => JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+    const saveHist = (h) => localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(0,25)));
+    const renderHist = () => {
+      const h = loadHist();
+      if (!h.length) { histEl.innerHTML = '<em>&gt; No records yet.</em>'; return; }
+      histEl.innerHTML = h.map(x =>
+        `<div class="hist-row"><span>▸ ${x.name} &nbsp; <small>${fmt(x.before)} → ${fmt(x.after)} (${x.ratio}%)</small></span></div>`
+      ).join('');
+    };
+    renderHist();
+
+    document.getElementById('cmpForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = document.getElementById('cmpFile').files[0];
+      if (!f) return;
+      write('> Compressing ' + f.name + ' (' + fmt(f.size) + ')...');
+      try {
+        const cs = new CompressionStream('gzip');
+        const stream = f.stream().pipeThrough(cs);
+        const blob = await new Response(stream).blob();
+        const ratio = Math.round((1 - blob.size / f.size) * 100);
+        write('> DONE. ' + fmt(f.size) + ' → ' + fmt(blob.size) + ' (saved ' + ratio + '%)');
+        // trigger download
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = f.name + '.gz';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        // history
+        const h = loadHist();
+        h.unshift({ name: f.name, before: f.size, after: blob.size, ratio });
+        saveHist(h); renderHist();
+      } catch (err) {
+        write('! ERROR: ' + err.message);
+      }
+    });
+  </script>
 </body>
-
 </html>

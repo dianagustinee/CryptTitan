@@ -1,31 +1,33 @@
 // ====================================
-// IMPORT MODULE
+// CRYPTITAN — app.js (FIXED)
+// AES-256-CBC file encryption / decryption
 // ====================================
 
-//framework untuk membangun web ini
 const express = require('express');
-//untuk mengelola pengunggahan file pada server
-const multer = require('multer');
-//library Node.js kriptografi yang berguna untuk mengamankan dan melindungi data
-const crypto = require('crypto');
-//untuk membaca, menulis, menghapus, memindahkan, dan mengelola berkas dan direktori pada sistem file.
-const fs = require('fs');
-//untuk mengelola jalur (path) file dan direktori 
-const path = require('path');
-//instance
-const app = express();
-//protokol untuk menjalankan http
+const multer  = require('multer');
+const crypto  = require('crypto');
+const fs      = require('fs');
+const path    = require('path');
+
+const app  = express();
 const port = 4000;
+
+// ====================================
+// PATHS
+// ====================================
+const ROOT_DIR    = __dirname;
+const PUBLIC_DIR  = path.join(ROOT_DIR, 'public');
+const UPLOAD_DIR  = path.join(ROOT_DIR, 'uploads');
+const ENC_LOG     = path.join(ROOT_DIR, 'encryption.log');
+const DEC_LOG     = path.join(ROOT_DIR, 'decryption.log');
+
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+if (!fs.existsSync(ENC_LOG))    fs.writeFileSync(ENC_LOG, '');
+if (!fs.existsSync(DEC_LOG))    fs.writeFileSync(DEC_LOG, '');
 
 // ====================================
 // MIDDLEWARE
 // ====================================
-
-// Mengizinkan Express untuk membaca data dari form (req.body)
-app.use(express.static('public'));
-app.use(express.urlencoded({ extended: true}));
-
-
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -34,147 +36,130 @@ app.use((req, res, next) => {
   next();
 });
 
-// static file (CSS, img, html di folder public)
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(ROOT_DIR, { index: 'index.html' }));
+app.use('/public', express.static(PUBLIC_DIR));
 
-// pastikan folder & file penting ada
-if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
-if (!fs.existsSync('encryption.log')) fs.writeFileSync('encryption.log', '');
-if (!fs.existsSync('decryption.log')) fs.writeFileSync('decryption.log', '');
-
-// ===================================
-// MULTER (UPLOAD)
-// ===================================
-
+// ====================================
+// MULTER
+// ====================================
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads');
+  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+  filename:    (req, file, cb) => {
+    const safe = path.basename(file.originalname).replace(/[/\\]/g, '_');
+    cb(null, safe);
   },
-  filename: (req, file, cb) => {
-    cb(null, file.originalname);
-  }
 });
-const upload = multer({ storage });
+const upload = multer({ storage, limits: { fileSize: 100 * 1024 * 1024 } });
 
-// ===================================
+// ====================================
 // ROUTES
-// ===================================
+// ====================================
+app.get('/', (req, res) => res.sendFile(path.join(ROOT_DIR, 'index.html')));
 
-// Menampilkan halaman index
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+const sha256Key = (pass) => crypto.createHash('sha256').update(String(pass), 'utf8').digest();
+const safeUnlink = (p) => { try { if (p && fs.existsSync(p)) fs.unlinkSync(p); } catch (_) {} };
+const appendLog = (logPath, filename) => fs.appendFileSync(logPath, filename + '\n', 'utf8');
 
-// ===================================
-// ENKRIPSI
-// ===================================
-
-// Endpoint untuk mengenkripsi file
+// ---------- ENKRIPSI ----------
 app.post('/encrypt', upload.single('file'), (req, res) => {
+  const uploaded = req.file ? req.file.path : null;
   try {
-    if (!req.file || !req.body.key) {
-      return res.status(400).send('File atau kunci tidak ada');
+    if (!req.file) return res.status(400).send('File tidak ada.');
+    if (!req.body || !req.body.key || !String(req.body.key).trim()) {
+      safeUnlink(uploaded);
+      return res.status(400).send('Kunci (password) tidak boleh kosong.');
     }
 
-    const key = crypto.createHash('sha256').update(req.body.key).digest();
-    const iv = crypto.randomBytes(16);
-
-    const data = fs.readFileSync(req.file.path);
-    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+    const key = sha256Key(req.body.key);
+    const iv  = crypto.randomBytes(16);
+    const data      = fs.readFileSync(uploaded);
+    const cipher    = crypto.createCipheriv('aes-256-cbc', key, iv);
     const encrypted = Buffer.concat([iv, cipher.update(data), cipher.final()]);
 
-    const outputPath = `uploads/encrypted_${req.file.originalname}`;
+    const originalName = path.basename(req.file.originalname);
+    const outputPath   = path.join(UPLOAD_DIR, 'encrypted_' + originalName);
+
     fs.writeFileSync(outputPath, encrypted);
+    appendLog(ENC_LOG, originalName);
+    safeUnlink(uploaded);
 
-    fs.appendFileSync('encryption.log', `${req.file.originalname}\n`);
-    fs.unlinkSync(req.file.path);
-
-    res.json({ filename: req.file.originalname });
+    return res.json({ filename: originalName });
   } catch (error) {
-    console.error(error);
-    res.status(500).send(`Enkripsi gagal: ${error.message}`);
+    console.error('[ENCRYPT ERROR]', error);
+    safeUnlink(uploaded);
+    return res.status(500).send('Enkripsi gagal: ' + error.message);
   }
 });
 
-// ===================================
-// DESKRIPSI
-// ===================================
-
-// Endpoint untuk mendekripsi file
+// ---------- DEKRIPSI ----------
 app.post('/decrypt', upload.single('file'), (req, res) => {
+  const uploaded = req.file ? req.file.path : null;
   try {
-    if (!req.file || !req.body.key) {
-      return res.status(400).send('File atau kunci tidak ada');
+    if (!req.file) return res.status(400).send('File tidak ada.');
+    if (!req.body || !req.body.key || !String(req.body.key).trim()) {
+      safeUnlink(uploaded);
+      return res.status(400).send('Kunci (password) tidak boleh kosong.');
     }
 
-    if (!req.file.originalname.startsWith('encrypted_')) {
-      return res.status(400).send('File ini bukan hasil enkripsi. Silakan upload file hasil enkripsi (nama diawali encrypted_) lalu masukkan kunci yang sama.');
+    const originalName = path.basename(req.file.originalname);
+    if (!originalName.startsWith('encrypted_')) {
+      safeUnlink(uploaded);
+      return res.status(400).send('File ini bukan hasil enkripsi. Upload file berawalan "encrypted_".');
     }
 
-    const key = crypto.createHash('sha256').update(req.body.key).digest();
-    const data = fs.readFileSync(req.file.path);
+    const key  = sha256Key(req.body.key);
+    const data = fs.readFileSync(uploaded);
+    if (data.length < 17) {
+      safeUnlink(uploaded);
+      return res.status(400).send('File terenkripsi rusak / terlalu pendek.');
+    }
 
-    const iv = data.slice(0, 16);
-    const content = data.slice(16);
-
+    const iv       = data.subarray(0, 16);
+    const content  = data.subarray(16);
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
     const decrypted = Buffer.concat([decipher.update(content), decipher.final()]);
 
-    const outputPath = `uploads/decrypted_${req.file.originalname}`;
+    const baseName   = originalName.replace(/^encrypted_/, '');
+    const outputPath = path.join(UPLOAD_DIR, 'decrypted_' + baseName);
+
     fs.writeFileSync(outputPath, decrypted);
+    appendLog(DEC_LOG, baseName);
+    safeUnlink(uploaded);
 
-    fs.appendFileSync('decryption.log', `${req.file.originalname}\n`);
-    fs.unlinkSync(req.file.path);
-
-    res.json({ filename: req.file.originalname });
+    return res.json({ filename: baseName });
   } catch (error) {
-    console.error(error);
-    res.status(400).send(`Dekripsi gagal: pastikan file hasil enkripsi (encrypted_) dan kunci benar. Detail: ${error.message}`);
+    console.error('[DECRYPT ERROR]', error);
+    safeUnlink(uploaded);
+    return res.status(400).send('Dekripsi gagal: pastikan file & kunci benar. Detail: ' + error.message);
   }
 });
 
-// ===================================
-// LOGS
-// ===================================
-
+// ---------- LOGS ----------
 function readLogFile(filePath) {
   if (!fs.existsSync(filePath)) return [];
-  const content = fs.readFileSync(filePath, 'utf8');
-  return content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((filename) => ({ filename }));
+  return fs.readFileSync(filePath, 'utf8')
+    .split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+    .map(filename => ({ filename }));
 }
+app.get('/logs/encrypted', (req, res) => res.json(readLogFile(ENC_LOG)));
+app.get('/logs/decrypted', (req, res) => res.json(readLogFile(DEC_LOG)));
 
-app.get('/logs/encrypted', (req, res) => {
-  res.json(readLogFile('encryption.log'));
-});
-
-app.get('/logs/decrypted', (req, res) => {
-  res.json(readLogFile('decryption.log'));
-});
-
-// ===================================
-// DOWNLOAD
-// ===================================
-
+// ---------- DOWNLOAD ----------
 app.get('/download/:type/:filename', (req, res) => {
-  const { type, filename } = req.params;
-  const filePath = path.join(__dirname, 'uploads', `${type}_${filename}`);
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).send('File tidak ditemukan');
-  }
-
-  res.download(filePath);
+  const { type } = req.params;
+  const filename = path.basename(req.params.filename);
+  if (!['encrypted', 'decrypted'].includes(type)) return res.status(400).send('Tipe tidak valid.');
+  const filePath = path.join(UPLOAD_DIR, `${type}_${filename}`);
+  if (!fs.existsSync(filePath)) return res.status(404).send('File tidak ditemukan.');
+  return res.download(filePath, `${type}_${filename}`);
 });
 
-// ===================================
-// SERVER
-// ===================================
-
-// Menjalankan server
-app.listen(port, () => {
-  console.log(`Server berjalan pada http://localhost:${port}`);
+// ---------- ERROR HANDLER ----------
+app.use((err, req, res, next) => {
+  console.error('[UNHANDLED]', err);
+  if (err instanceof multer.MulterError) return res.status(400).send('Upload error: ' + err.message);
+  return res.status(500).send('Server error: ' + err.message);
 });
+
+app.listen(port, () => console.log(`Server berjalan pada http://localhost:${port}`));
