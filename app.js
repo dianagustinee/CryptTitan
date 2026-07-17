@@ -1,165 +1,200 @@
-// ====================================
-// CRYPTITAN — app.js (FIXED)
-// AES-256-CBC file encryption / decryption
-// ====================================
+// ==========================================================
+// CRYPTITAN — app.js  (CLIENT-SIDE / GitHub Pages compatible)
+// ----------------------------------------------------------
+// Tidak perlu server. Semua enkripsi & dekripsi berjalan di
+// browser memakai Web Crypto API (native, tanpa CDN).
+//
+// Format file terenkripsi (kompatibel dgn versi Node lama):
+//   [ IV 16 byte ] [ ciphertext AES-256-CBC ]
+//   key = SHA-256(password)
+//
+// Nama file:
+//   Enkripsi : <namaAsli>          →  encrypted_<namaAsli>
+//   Dekripsi : encrypted_<namaAsli> →  decrypted_<namaAsli>
+//
+// Cara kerja:
+//   Script ini otomatis menangkap SEMUA <form> yang action-nya
+//   mengandung "/encrypt" atau "/decrypt" (submit via fetch POST
+//   di HTML lama tidak lagi jalan di GitHub Pages → 405).
+//   Selain itu juga mendukung tombol dgn id umum:
+//     #encryptBtn / #decryptBtn / [data-action="encrypt"|"decrypt"]
+// ==========================================================
 
-const express = require('express');
-const multer  = require('multer');
-const crypto  = require('crypto');
-const fs      = require('fs');
-const path    = require('path');
+(function () {
+  'use strict';
 
-const app  = express();
-const port = 4000;
-
-// ====================================
-// PATHS
-// ====================================
-const ROOT_DIR    = __dirname;
-const PUBLIC_DIR  = path.join(ROOT_DIR, 'public');
-const UPLOAD_DIR  = path.join(ROOT_DIR, 'uploads');
-const ENC_LOG     = path.join(ROOT_DIR, 'encryption.log');
-const DEC_LOG     = path.join(ROOT_DIR, 'decryption.log');
-
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-if (!fs.existsSync(ENC_LOG))    fs.writeFileSync(ENC_LOG, '');
-if (!fs.existsSync(DEC_LOG))    fs.writeFileSync(DEC_LOG, '');
-
-// ====================================
-// MIDDLEWARE
-// ====================================
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
-  next();
-});
-
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(ROOT_DIR, { index: 'index.html' }));
-app.use('/public', express.static(PUBLIC_DIR));
-
-// ====================================
-// MULTER
-// ====================================
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename:    (req, file, cb) => {
-    const safe = path.basename(file.originalname).replace(/[/\\]/g, '_');
-    cb(null, safe);
-  },
-});
-const upload = multer({ storage, limits: { fileSize: 100 * 1024 * 1024 } });
-
-// ====================================
-// ROUTES
-// ====================================
-app.get('/', (req, res) => res.sendFile(path.join(ROOT_DIR, 'index.html')));
-
-const sha256Key = (pass) => crypto.createHash('sha256').update(String(pass), 'utf8').digest();
-const safeUnlink = (p) => { try { if (p && fs.existsSync(p)) fs.unlinkSync(p); } catch (_) {} };
-const appendLog = (logPath, filename) => fs.appendFileSync(logPath, filename + '\n', 'utf8');
-
-// ---------- ENKRIPSI ----------
-app.post('/encrypt', upload.single('file'), (req, res) => {
-  const uploaded = req.file ? req.file.path : null;
-  try {
-    if (!req.file) return res.status(400).send('File tidak ada.');
-    if (!req.body || !req.body.key || !String(req.body.key).trim()) {
-      safeUnlink(uploaded);
-      return res.status(400).send('Kunci (password) tidak boleh kosong.');
+  // ---------- util UI ----------
+  function log(msg, type) {
+    const box = document.querySelector('#console-log, #consoleLog, .console-log, #log, #output');
+    if (box) {
+      const line = document.createElement('div');
+      line.textContent = '> ' + msg;
+      if (type === 'error') line.style.color = '#ff6b6b';
+      if (type === 'ok')    line.style.color = '#7CFC7C';
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
     }
-
-    const key = sha256Key(req.body.key);
-    const iv  = crypto.randomBytes(16);
-    const data      = fs.readFileSync(uploaded);
-    const cipher    = crypto.createCipheriv('aes-256-cbc', key, iv);
-    const encrypted = Buffer.concat([iv, cipher.update(data), cipher.final()]);
-
-    const originalName = path.basename(req.file.originalname);
-    const outputPath   = path.join(UPLOAD_DIR, 'encrypted_' + originalName);
-
-    fs.writeFileSync(outputPath, encrypted);
-    appendLog(ENC_LOG, originalName);
-    safeUnlink(uploaded);
-
-    return res.json({ filename: originalName });
-  } catch (error) {
-    console.error('[ENCRYPT ERROR]', error);
-    safeUnlink(uploaded);
-    return res.status(500).send('Enkripsi gagal: ' + error.message);
+    if (type === 'error') console.error('[CrypTitan]', msg);
+    else console.log('[CrypTitan]', msg);
   }
-});
 
-// ---------- DEKRIPSI ----------
-app.post('/decrypt', upload.single('file'), (req, res) => {
-  const uploaded = req.file ? req.file.path : null;
-  try {
-    if (!req.file) return res.status(400).send('File tidak ada.');
-    if (!req.body || !req.body.key || !String(req.body.key).trim()) {
-      safeUnlink(uploaded);
-      return res.status(400).send('Kunci (password) tidak boleh kosong.');
-    }
-
-    const originalName = path.basename(req.file.originalname);
-    if (!originalName.startsWith('encrypted_')) {
-      safeUnlink(uploaded);
-      return res.status(400).send('File ini bukan hasil enkripsi. Upload file berawalan "encrypted_".');
-    }
-
-    const key  = sha256Key(req.body.key);
-    const data = fs.readFileSync(uploaded);
-    if (data.length < 17) {
-      safeUnlink(uploaded);
-      return res.status(400).send('File terenkripsi rusak / terlalu pendek.');
-    }
-
-    const iv       = data.subarray(0, 16);
-    const content  = data.subarray(16);
-    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-    const decrypted = Buffer.concat([decipher.update(content), decipher.final()]);
-
-    const baseName   = originalName.replace(/^encrypted_/, '');
-    const outputPath = path.join(UPLOAD_DIR, 'decrypted_' + baseName);
-
-    fs.writeFileSync(outputPath, decrypted);
-    appendLog(DEC_LOG, baseName);
-    safeUnlink(uploaded);
-
-    return res.json({ filename: baseName });
-  } catch (error) {
-    console.error('[DECRYPT ERROR]', error);
-    safeUnlink(uploaded);
-    return res.status(400).send('Dekripsi gagal: pastikan file & kunci benar. Detail: ' + error.message);
+  function triggerDownload(bytes, filename, mime) {
+    const blob = new Blob([bytes], { type: mime || 'application/octet-stream' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
-});
 
-// ---------- LOGS ----------
-function readLogFile(filePath) {
-  if (!fs.existsSync(filePath)) return [];
-  return fs.readFileSync(filePath, 'utf8')
-    .split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-    .map(filename => ({ filename }));
-}
-app.get('/logs/encrypted', (req, res) => res.json(readLogFile(ENC_LOG)));
-app.get('/logs/decrypted', (req, res) => res.json(readLogFile(DEC_LOG)));
+  // ---------- crypto helpers (Web Crypto API) ----------
+  async function deriveKey(password) {
+    const pwBytes = new TextEncoder().encode(String(password));
+    const hash    = await crypto.subtle.digest('SHA-256', pwBytes); // 32 byte
+    return crypto.subtle.importKey('raw', hash, { name: 'AES-CBC' }, false, ['encrypt', 'decrypt']);
+  }
 
-// ---------- DOWNLOAD ----------
-app.get('/download/:type/:filename', (req, res) => {
-  const { type } = req.params;
-  const filename = path.basename(req.params.filename);
-  if (!['encrypted', 'decrypted'].includes(type)) return res.status(400).send('Tipe tidak valid.');
-  const filePath = path.join(UPLOAD_DIR, `${type}_${filename}`);
-  if (!fs.existsSync(filePath)) return res.status(404).send('File tidak ditemukan.');
-  return res.download(filePath, `${type}_${filename}`);
-});
+  async function encryptBytes(plainBytes, password) {
+    const key = await deriveKey(password);
+    const iv  = crypto.getRandomValues(new Uint8Array(16));
+    const ct  = new Uint8Array(
+      await crypto.subtle.encrypt({ name: 'AES-CBC', iv }, key, plainBytes)
+    );
+    const out = new Uint8Array(iv.length + ct.length);
+    out.set(iv, 0);
+    out.set(ct, iv.length);
+    return out;
+  }
 
-// ---------- ERROR HANDLER ----------
-app.use((err, req, res, next) => {
-  console.error('[UNHANDLED]', err);
-  if (err instanceof multer.MulterError) return res.status(400).send('Upload error: ' + err.message);
-  return res.status(500).send('Server error: ' + err.message);
-});
+  async function decryptBytes(encBytes, password) {
+    if (encBytes.length < 17) throw new Error('File terenkripsi rusak / terlalu pendek.');
+    const key = await deriveKey(password);
+    const iv  = encBytes.slice(0, 16);
+    const ct  = encBytes.slice(16);
+    const pt  = await crypto.subtle.decrypt({ name: 'AES-CBC', iv }, key, ct);
+    return new Uint8Array(pt);
+  }
 
-app.listen(port, () => console.log(`Server berjalan pada http://localhost:${port}`));
+  function readFileAsBytes(file) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload  = () => resolve(new Uint8Array(fr.result));
+      fr.onerror = () => reject(new Error('Gagal membaca file.'));
+      fr.readAsArrayBuffer(file);
+    });
+  }
+
+  // ---------- log persist (localStorage, gantikan encryption.log/decryption.log) ----------
+  function appendLog(kind, filename) {
+    try {
+      const key  = kind === 'encrypt' ? 'cryptitan_enc_log' : 'cryptitan_dec_log';
+      const list = JSON.parse(localStorage.getItem(key) || '[]');
+      list.push({ filename, at: new Date().toISOString() });
+      localStorage.setItem(key, JSON.stringify(list));
+    } catch (_) { /* ignore */ }
+  }
+
+  // ---------- inti aksi ----------
+  async function runEncrypt(file, password) {
+    if (!file)     throw new Error('Pilih file terlebih dahulu.');
+    if (!password) throw new Error('Kunci (password) tidak boleh kosong.');
+
+    log('Mengenkripsi ' + file.name + ' ...');
+    const bytes     = await readFileAsBytes(file);
+    const encrypted = await encryptBytes(bytes, password);
+    const outName   = 'encrypted_' + file.name;
+
+    triggerDownload(encrypted, outName, 'application/octet-stream');
+    appendLog('encrypt', file.name);
+    log('Selesai. File diunduh sebagai ' + outName, 'ok');
+  }
+
+  async function runDecrypt(file, password) {
+    if (!file)     throw new Error('Pilih file terlebih dahulu.');
+    if (!password) throw new Error('Kunci (password) tidak boleh kosong.');
+    if (!file.name.startsWith('encrypted_')) {
+      throw new Error('File ini bukan hasil enkripsi. Nama harus diawali "encrypted_".');
+    }
+
+    log('Mendekripsi ' + file.name + ' ...');
+    const bytes = await readFileAsBytes(file);
+    let decrypted;
+    try {
+      decrypted = await decryptBytes(bytes, password);
+    } catch (e) {
+      throw new Error('Dekripsi gagal: kunci salah atau file rusak.');
+    }
+    const baseName = file.name.replace(/^encrypted_/, '');
+    const outName  = 'decrypted_' + baseName;
+
+    triggerDownload(decrypted, outName, 'application/octet-stream');
+    appendLog('decrypt', baseName);
+    log('Selesai. File diunduh sebagai ' + outName, 'ok');
+  }
+
+  // ---------- pencari input di sekitar tombol/form ----------
+  function findFileInput(scope) {
+    return (scope && scope.querySelector && scope.querySelector('input[type="file"]'))
+        || document.querySelector('input[type="file"]');
+  }
+  function findKeyInput(scope) {
+    const sel = 'input[name="key"], input[name="password"], #key, #password, #keyInput, input[type="password"], input[type="text"]';
+    return (scope && scope.querySelector && scope.querySelector(sel))
+        || document.querySelector(sel);
+  }
+
+  async function handleAction(kind, scope) {
+    const fileEl = findFileInput(scope);
+    const keyEl  = findKeyInput(scope);
+    const file   = fileEl && fileEl.files && fileEl.files[0];
+    const pass   = keyEl && keyEl.value;
+
+    try {
+      if (kind === 'encrypt') await runEncrypt(file, pass);
+      else                    await runDecrypt(file, pass);
+    } catch (err) {
+      log(err.message || String(err), 'error');
+      alert(err.message || String(err));
+    }
+  }
+
+  // ---------- pasang listener ----------
+  function bind() {
+    // 1) Tangkap SEMUA form yang action-nya /encrypt atau /decrypt
+    document.querySelectorAll('form').forEach((form) => {
+      const action = (form.getAttribute('action') || '').toLowerCase();
+      let kind = null;
+      if (action.includes('/encrypt') || action.endsWith('encrypt')) kind = 'encrypt';
+      if (action.includes('/decrypt') || action.endsWith('decrypt')) kind = 'decrypt';
+      if (!kind) return;
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleAction(kind, form);
+      });
+    });
+
+    // 2) Tombol dgn id umum
+    const enc = document.querySelector('#encryptBtn, #btnEncrypt, [data-action="encrypt"]');
+    if (enc) enc.addEventListener('click', (e) => { e.preventDefault(); handleAction('encrypt'); });
+
+    const dec = document.querySelector('#decryptBtn, #btnDecrypt, [data-action="decrypt"]');
+    if (dec) dec.addEventListener('click', (e) => { e.preventDefault(); handleAction('decrypt'); });
+
+    // 3) Expose global (dipanggil dari onclick="runEncryption()" dsb.)
+    window.runEncryption = () => handleAction('encrypt');
+    window.runDecryption = () => handleAction('decrypt');
+    window.runEncrypt    = () => handleAction('encrypt');
+    window.runDecrypt    = () => handleAction('decrypt');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bind);
+  } else {
+    bind();
+  }
+
+  log('CrypTitan siap (mode client-side, AES-256-CBC / Web Crypto API).', 'ok');
+})();
